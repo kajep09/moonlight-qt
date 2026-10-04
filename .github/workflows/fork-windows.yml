@@ -1,0 +1,79 @@
+---
+# Fork-only Windows x64 build. Kept separate from upstream's build.yml so
+# rebasing onto upstream never conflicts; upstream's "Build" workflow is
+# disabled in the fork's Actions settings.
+name: Fork - Windows x64
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - custom
+      - 'custom-*'
+  workflow_dispatch:
+
+concurrency:
+  group: fork-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2025
+    env:
+      QT_VERSION: 6.12.0
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Set CI version
+        shell: bash
+        run: |
+          echo "CI_VERSION=$(cat app/version.txt)-custom.$(echo ${GITHUB_SHA} | cut -c1-7)" >> "${GITHUB_ENV}"
+
+      - name: Download dependencies
+        run: powershell ./setup-deps.ps1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          tools: 'tools_qtcreator_gui'
+          version: ${{ env.QT_VERSION }}
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Build x64 binaries
+        shell: cmd
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release x64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\${{ env.QT_VERSION }}\msvc2022_64\bin
+
+      - name: Upload portable build
+        uses: actions/upload-artifact@v6
+        with:
+          name: Moonlight-Windows-x64-${{ env.CI_VERSION }}
+          path: build/deploy-x64-release/*
+          if-no-files-found: error
+
+      - name: Upload MSI
+        uses: actions/upload-artifact@v6
+        with:
+          name: Moonlight-Windows-x64-MSI-${{ env.CI_VERSION }}
+          path: build/build-x64-release/Moonlight.msi
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Upload Symbols
+        uses: actions/upload-artifact@v6
+        with:
+          name: zDevDbgSyms-Windows-x64-${{ env.CI_VERSION }}
+          path: build/symbols-x64-release/*.pdb
+          if-no-files-found: error
