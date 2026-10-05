@@ -2,6 +2,8 @@
 #include "backend/computermanager.h"
 #include "backend/computerseeker.h"
 #include "streaming/session.h"
+#include "settings/hoststreamsettings.h"
+#include "cli/commandlineparser.h"
 
 #include <QCoreApplication>
 #include <QTimer>
@@ -102,7 +104,14 @@ public:
                     m_TimeoutTimer->stop();
                     if (isNotStreaming() || isStreamingApp(app)) {
                         m_State = StateStartSession;
-                        session = new Session(m_Computer, app, m_Preferences);
+
+                        // Command line options take precedence over this host's settings
+                        StreamingPreferences* prefs = StreamingPreferences::createDetached();
+                        HostStreamSettings::load(m_Computer->uuid).applyTo(prefs);
+                        StreamCommandLineParser().parse(QCoreApplication::arguments(), prefs);
+
+                        session = new Session(m_Computer, app, prefs);
+                        prefs->setParent(session);
                         emit q->sessionCreated(app.name, session);
                     } else {
                         emit q->appQuitRequired(getCurrentAppName());

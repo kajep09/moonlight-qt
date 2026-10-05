@@ -43,6 +43,10 @@ public:
 
     Q_INVOKABLE void renameComputer(int computerIndex, QString name);
 
+    Q_INVOKABLE QVariantMap getHostStreamSettings(int computerIndex);
+
+    Q_INVOKABLE void setHostStreamSettings(int computerIndex, QVariantMap settings);
+
     Q_INVOKABLE Session* createSessionForCurrentGame(int computerIndex);
 
 signals:
