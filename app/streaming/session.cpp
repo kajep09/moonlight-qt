@@ -1,5 +1,6 @@
 #include "session.h"
 #include "settings/streamingpreferences.h"
+#include "settings/hoststreamsettings.h"
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
 
@@ -565,7 +566,7 @@ bool Session::populateDecoderProperties(SDL_Window* window)
 }
 
 Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences)
-    : m_Preferences(preferences ? preferences : StreamingPreferences::get()),
+    : m_Preferences(preferences ? preferences : createHostPreferences(computer)),
       m_IsFullScreen(m_Preferences->windowMode != StreamingPreferences::WM_WINDOWED || !WMUtils::isRunningDesktopEnvironment()),
       m_Computer(computer),
       m_App(app),
@@ -586,6 +587,17 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_AudioSampleCount(0),
       m_DropAudioEndTime(0)
 {
+    if (!preferences) {
+        m_Preferences->setParent(this);
+    }
+}
+
+StreamingPreferences* Session::createHostPreferences(NvComputer* computer)
+{
+    // The global settings with this host's overrides applied
+    StreamingPreferences* prefs = StreamingPreferences::createDetached();
+    HostStreamSettings::load(computer->uuid).applyTo(prefs);
+    return prefs;
 }
 
 Session::~Session()

@@ -202,6 +202,14 @@ CenteredGridView {
                     }
                 }
                 NavigableMenuItem {
+                    text: qsTr("Stream Settings")
+                    onTriggered: {
+                        hostSettingsDialog.pcIndex = index
+                        hostSettingsDialog.pcName = model.name
+                        hostSettingsDialog.open()
+                    }
+                }
+                NavigableMenuItem {
                     text: qsTr("Delete PC")
                     onTriggered: {
                         deletePcDialog.pcIndex = index
@@ -398,6 +406,267 @@ CenteredGridView {
         text: showPcDetailsDialog.pcDetails
         imageSrc: "qrc:/res/baseline-help_outline-24px.svg"
         standardButtons: Dialog.Ok
+    }
+
+    // Per-host overrides of the global stream settings. A value of 0 (or -1
+    // for the display mode) means the global setting is used.
+    NavigableDialog {
+        id: hostSettingsDialog
+        property int pcIndex : -1
+        property string pcName : ""
+
+        title: qsTr("Stream settings for %1").arg(pcName)
+        standardButtons: Dialog.Save | Dialog.Cancel
+
+        function isCustomResolution() {
+            return hostResCombo.currentIndex >= 0 && hostResModel.get(hostResCombo.currentIndex).w < 0
+        }
+
+        function isInputValid() {
+            return !isCustomResolution() || (hostResWidth.acceptableInput && hostResHeight.acceptableInput)
+        }
+
+        function updateSaveButton() {
+            // standardButton() was added in Qt 5.10, so we must check for it first
+            if (standardButton) {
+                standardButton(Dialog.Save).enabled = isInputValid()
+            }
+        }
+
+        function selectedWidth() {
+            if (hostResCombo.currentIndex < 0) {
+                return 0
+            }
+            var item = hostResModel.get(hostResCombo.currentIndex)
+            return item.w >= 0 ? item.w : (parseInt(hostResWidth.text) || 0)
+        }
+
+        function selectedHeight() {
+            if (hostResCombo.currentIndex < 0) {
+                return 0
+            }
+            var item = hostResModel.get(hostResCombo.currentIndex)
+            return item.h >= 0 ? item.h : (parseInt(hostResHeight.text) || 0)
+        }
+
+        function selectedFps() {
+            return hostFpsCombo.currentIndex >= 0 ? hostFpsModel.get(hostFpsCombo.currentIndex).val : 0
+        }
+
+        // Mirrors HostStreamSettings::applyTo() for a bitrate that isn't overridden
+        function automaticBitrate() {
+            var overridesMode = (selectedWidth() > 0 && selectedHeight() > 0) || selectedFps() > 0
+            if (overridesMode && StreamingPreferences.autoAdjustBitrate) {
+                return StreamingPreferences.getDefaultBitrate(selectedWidth() || StreamingPreferences.width,
+                                                              selectedHeight() || StreamingPreferences.height,
+                                                              selectedFps() || StreamingPreferences.fps,
+                                                              StreamingPreferences.enableYUV444)
+            }
+            return StreamingPreferences.bitrateKbps
+        }
+
+        onAboutToShow: {
+            var settings = computerModel.getHostStreamSettings(pcIndex)
+
+            hostResModel.setProperty(0, "text", qsTr("Use global setting (%1x%2)").arg(StreamingPreferences.width).arg(StreamingPreferences.height))
+            var resIndex = 0
+            if (settings.width > 0) {
+                resIndex = hostResModel.count - 1
+                for (var i = 1; i < hostResModel.count - 1; i++) {
+                    if (hostResModel.get(i).w === settings.width && hostResModel.get(i).h === settings.height) {
+                        resIndex = i
+                        break
+                    }
+                }
+            }
+            hostResWidth.text = settings.width > 0 ? settings.width : ""
+            hostResHeight.text = settings.height > 0 ? settings.height : ""
+            hostResCombo.currentIndex = -1
+            hostResCombo.currentIndex = resIndex
+
+            hostFpsModel.setProperty(0, "text", qsTr("Use global setting (%1 FPS)").arg(StreamingPreferences.fps))
+            var fpsIndex = -1
+            for (var j = 0; j < hostFpsModel.count; j++) {
+                if (hostFpsModel.get(j).val === settings.fps) {
+                    fpsIndex = j
+                    break
+                }
+            }
+            if (fpsIndex < 0) {
+                hostFpsModel.append({ text: qsTr("%1 FPS").arg(settings.fps), val: settings.fps })
+                fpsIndex = hostFpsModel.count - 1
+            }
+            hostFpsCombo.currentIndex = -1
+            hostFpsCombo.currentIndex = fpsIndex
+
+            hostWindowModeCombo.currentIndex = 0
+            for (var k = 0; k < hostWindowModeModel.count; k++) {
+                if (hostWindowModeModel.get(k).val === settings.windowmode) {
+                    hostWindowModeCombo.currentIndex = k
+                    break
+                }
+            }
+
+            hostBitrateCheck.checked = settings.bitrate > 0
+            hostBitrateSlider.value = settings.bitrate > 0 ? settings.bitrate : automaticBitrate()
+
+            hostResCombo.recalculateWidth()
+            hostFpsCombo.recalculateWidth()
+            hostWindowModeCombo.recalculateWidth()
+            updateSaveButton()
+        }
+
+        onAccepted: {
+            var width = 0
+            var height = 0
+            if (selectedWidth() > 0 && selectedHeight() > 0) {
+                width = selectedWidth()
+                height = selectedHeight()
+            }
+
+            computerModel.setHostStreamSettings(pcIndex, {
+                "width": width,
+                "height": height,
+                "fps": selectedFps(),
+                "bitrate": hostBitrateCheck.checked ? hostBitrateSlider.value : 0,
+                "windowmode": hostWindowModeModel.get(hostWindowModeCombo.currentIndex).val
+            })
+        }
+
+        ColumnLayout {
+            spacing: 5
+
+            Label {
+                text: qsTr("Settings left on 'Use global setting' follow the main Settings page.")
+                font.pointSize: 9
+                wrapMode: Text.Wrap
+                Layout.maximumWidth: 450
+            }
+
+            Label {
+                text: qsTr("Resolution")
+                font.bold: true
+            }
+
+            Row {
+                spacing: 5
+
+                AutoResizingComboBox {
+                    id: hostResCombo
+                    maximumWidth: 450
+                    textRole: "text"
+                    model: ListModel {
+                        id: hostResModel
+                        ListElement { text: "Use global setting"; w: 0; h: 0 }
+                        ListElement { text: "1280x720"; w: 1280; h: 720 }
+                        ListElement { text: "1920x1080"; w: 1920; h: 1080 }
+                        ListElement { text: "1920x1200"; w: 1920; h: 1200 }
+                        ListElement { text: "2560x1440"; w: 2560; h: 1440 }
+                        ListElement { text: "3840x1080"; w: 3840; h: 1080 }
+                        ListElement { text: "3840x2160"; w: 3840; h: 2160 }
+                        ListElement { text: qsTr("Custom"); w: -1; h: -1 }
+                    }
+                    onCurrentIndexChanged: {
+                        if (currentIndex >= 0) {
+                            hostSettingsDialog.updateSaveButton()
+                        }
+                    }
+                }
+
+                TextField {
+                    id: hostResWidth
+                    visible: hostSettingsDialog.isCustomResolution()
+                    maximumLength: 5
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    placeholderText: qsTr("Width")
+                    validator: IntValidator{bottom:256; top:8192}
+                    onTextChanged: hostSettingsDialog.updateSaveButton()
+                }
+
+                Label {
+                    visible: hostResWidth.visible
+                    text: "x"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                TextField {
+                    id: hostResHeight
+                    visible: hostResWidth.visible
+                    maximumLength: 5
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    placeholderText: qsTr("Height")
+                    validator: IntValidator{bottom:256; top:8192}
+                    onTextChanged: hostSettingsDialog.updateSaveButton()
+                }
+            }
+
+            Label {
+                text: qsTr("Frame rate")
+                font.bold: true
+            }
+
+            AutoResizingComboBox {
+                id: hostFpsCombo
+                maximumWidth: 450
+                textRole: "text"
+                model: ListModel {
+                    id: hostFpsModel
+                    ListElement { text: "Use global setting"; val: 0 }
+                    ListElement { text: "30 FPS"; val: 30 }
+                    ListElement { text: "60 FPS"; val: 60 }
+                    ListElement { text: "90 FPS"; val: 90 }
+                    ListElement { text: "120 FPS"; val: 120 }
+                    ListElement { text: "144 FPS"; val: 144 }
+                    ListElement { text: "240 FPS"; val: 240 }
+                }
+            }
+
+            Label {
+                text: hostBitrateCheck.checked ? qsTr("Video bitrate: %1 Mbps").arg(hostBitrateSlider.value / 1000.0)
+                                               : qsTr("Video bitrate: automatic (%1 Mbps)").arg(hostSettingsDialog.automaticBitrate() / 1000.0)
+                font.bold: true
+            }
+
+            CheckBox {
+                id: hostBitrateCheck
+                text: qsTr("Use a custom bitrate for this PC")
+                onCheckedChanged: {
+                    if (!checked) {
+                        hostBitrateSlider.value = hostSettingsDialog.automaticBitrate()
+                    }
+                }
+            }
+
+            Slider {
+                id: hostBitrateSlider
+                enabled: hostBitrateCheck.checked
+                stepSize: 500
+                from: 500
+                to: StreamingPreferences.unlockBitrate ? 500000 : 150000
+                snapMode: "SnapOnRelease"
+                Layout.preferredWidth: 450
+            }
+
+            Label {
+                text: qsTr("Display mode")
+                font.bold: true
+                visible: SystemProperties.hasDesktopEnvironment
+            }
+
+            AutoResizingComboBox {
+                id: hostWindowModeCombo
+                visible: SystemProperties.hasDesktopEnvironment
+                maximumWidth: 450
+                textRole: "text"
+                model: ListModel {
+                    id: hostWindowModeModel
+                    ListElement { text: qsTr("Use global setting"); val: -1 }
+                    ListElement { text: qsTr("Fullscreen"); val: StreamingPreferences.WM_FULLSCREEN }
+                    ListElement { text: qsTr("Borderless windowed"); val: StreamingPreferences.WM_FULLSCREEN_DESKTOP }
+                    ListElement { text: qsTr("Windowed"); val: StreamingPreferences.WM_WINDOWED }
+                }
+            }
+        }
     }
 
     ScrollBar.vertical: ScrollBar {}

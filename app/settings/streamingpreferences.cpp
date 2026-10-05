@@ -104,6 +104,11 @@ StreamingPreferences* StreamingPreferences::get(QQmlEngine *qmlEngine)
     }
 }
 
+StreamingPreferences* StreamingPreferences::createDetached()
+{
+    return new StreamingPreferences(nullptr);
+}
+
 void StreamingPreferences::reload()
 {
     QSettings settings;

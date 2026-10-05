@@ -144,6 +144,9 @@ signals:
     void launchWarningsChanged();
 
 private:
+    static
+    StreamingPreferences* createHostPreferences(NvComputer* computer);
+
     void exec();
 
     bool startConnectionAsync();

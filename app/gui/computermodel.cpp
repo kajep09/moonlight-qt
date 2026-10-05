@@ -1,4 +1,5 @@
 #include "computermodel.h"
+#include "settings/hoststreamsettings.h"
 
 #include <QThreadPool>
 
@@ -140,6 +141,8 @@ void ComputerModel::deleteComputer(int computerIndex)
 
     beginRemoveRows(QModelIndex(), computerIndex, computerIndex);
 
+    HostStreamSettings::remove(m_Computers[computerIndex]->uuid);
+
     // m_Computer[computerIndex] will be deleted by this call
     m_ComputerManager->deleteHost(m_Computers[computerIndex]);
 
@@ -177,6 +180,20 @@ void ComputerModel::renameComputer(int computerIndex, QString name)
     Q_ASSERT(computerIndex < m_Computers.count());
 
     m_ComputerManager->renameHost(m_Computers[computerIndex], name);
+}
+
+QVariantMap ComputerModel::getHostStreamSettings(int computerIndex)
+{
+    Q_ASSERT(computerIndex < m_Computers.count());
+
+    return HostStreamSettings::load(m_Computers[computerIndex]->uuid).toVariantMap();
+}
+
+void ComputerModel::setHostStreamSettings(int computerIndex, QVariantMap settings)
+{
+    Q_ASSERT(computerIndex < m_Computers.count());
+
+    HostStreamSettings::fromVariantMap(settings).save(m_Computers[computerIndex]->uuid);
 }
 
 QString ComputerModel::generatePinString()
