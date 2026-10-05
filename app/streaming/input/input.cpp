@@ -15,6 +15,7 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
       m_SwapMouseButtons(prefs.swapMouseButtons),
       m_ReverseScrollDirection(prefs.reverseScrollDirection),
       m_SwapFaceButtons(prefs.swapFaceButtons),
+      m_ShortcutsRequireLeftAlt(prefs.shortcutsRequireLeftAlt),
       m_MouseWasInVideoRegion(false),
       m_PendingMouseButtonsAllUpOnVideoRegionLeave(false),
       m_PointerRegionLockActive(false),
@@ -134,6 +135,14 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].keyCode = SDLK_k;
     m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].scanCode = SDL_SCANCODE_K;
     m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].enabled = WMUtils::isRunningDesktopEnvironment();
+
+    // Let the user pass individual shortcuts through to the host
+    for (int i = 0; i < KeyComboMax; i++) {
+        QChar letter = QChar((int)m_SpecialKeyCombos[i].keyCode).toUpper();
+        if (prefs.disabledShortcutKeys.contains(letter)) {
+            m_SpecialKeyCombos[i].enabled = false;
+        }
+    }
 
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);

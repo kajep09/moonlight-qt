@@ -195,10 +195,11 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         return;
     }
 
-    // Check for our special key combos
+    // Check for our special key combos. Optionally only Left Alt counts, so
+    // Ctrl+RightAlt+Shift combos always reach the host.
     if ((event->state == SDL_PRESSED) &&
             (event->keysym.mod & KMOD_CTRL) &&
-            (event->keysym.mod & KMOD_ALT) &&
+            (event->keysym.mod & (m_ShortcutsRequireLeftAlt ? KMOD_LALT : KMOD_ALT)) &&
             (event->keysym.mod & KMOD_SHIFT)) {
         // First we test the SDLK combos for matches,
         // that way we ensure that latin keyboard users

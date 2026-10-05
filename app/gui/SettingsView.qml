@@ -1466,6 +1466,74 @@ Flickable {
         }
 
         GroupBox {
+            id: shortcutSettingsGroupBox
+            width: (parent.width - (parent.leftPadding + parent.rightPadding))
+            padding: 12
+            title: "<font color=\"skyblue\">" + qsTr("Keyboard Shortcuts") + "</font>"
+            font.pointSize: 12
+
+            Column {
+                anchors.fill: parent
+                spacing: 5
+
+                CheckBox {
+                    id: shortcutsLeftAltCheck
+                    hoverEnabled: true
+                    width: parent.width
+                    text: qsTr("Only trigger shortcuts with the left Alt key")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.shortcutsRequireLeftAlt
+                    onCheckedChanged: {
+                        StreamingPreferences.shortcutsRequireLeftAlt = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("When checked, Ctrl+Right Alt+Shift combinations are always sent to the host.")
+                }
+
+                Label {
+                    width: parent.width
+                    text: qsTr("Unchecked shortcuts are sent to the host instead of being handled by Moonlight.")
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                }
+
+                Repeater {
+                    model: ListModel {
+                        ListElement { key: "Q"; desc: qsTr("Disconnect") }
+                        ListElement { key: "E"; desc: qsTr("Quit the app on the host and exit Moonlight") }
+                        ListElement { key: "Z"; desc: qsTr("Toggle mouse and keyboard capture") }
+                        ListElement { key: "X"; desc: qsTr("Toggle full-screen") }
+                        ListElement { key: "D"; desc: qsTr("Minimize") }
+                        ListElement { key: "S"; desc: qsTr("Toggle the statistics overlay") }
+                        ListElement { key: "M"; desc: qsTr("Toggle remote desktop mouse mode") }
+                        ListElement { key: "C"; desc: qsTr("Show or hide the cursor in remote desktop mouse mode") }
+                        ListElement { key: "V"; desc: qsTr("Type the clipboard text on the host") }
+                        ListElement { key: "L"; desc: qsTr("Toggle locking the mouse to the window") }
+                        ListElement { key: "K"; desc: qsTr("Toggle capturing system keyboard shortcuts") }
+                    }
+
+                    delegate: CheckBox {
+                        hoverEnabled: true
+                        width: parent.width
+                        text: "Ctrl+Alt+Shift+" + model.key + ": " + model.desc
+                        font.pointSize: 12
+                        checked: StreamingPreferences.disabledShortcutKeys.indexOf(model.key) < 0
+                        onCheckedChanged: {
+                            var keys = StreamingPreferences.disabledShortcutKeys.replace(model.key, "")
+                            if (!checked) {
+                                keys += model.key
+                            }
+                            StreamingPreferences.disabledShortcutKeys = keys
+                        }
+                    }
+                }
+            }
+        }
+
+        GroupBox {
             id: gamepadSettingsGroupBox
             width: (parent.width - (parent.leftPadding + parent.rightPadding))
             padding: 12

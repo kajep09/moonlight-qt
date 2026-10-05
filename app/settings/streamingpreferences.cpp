@@ -49,6 +49,8 @@
 #define SER_REVERSESCROLL "reversescroll"
 #define SER_SWAPFACEBUTTONS "swapfacebuttons"
 #define SER_CAPTURESYSKEYS "capturesyskeys"
+#define SER_DISABLEDSHORTCUTS "disabledshortcuts"
+#define SER_SHORTCUTSLEFTALT "shortcutsleftalt"
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
 #define SER_RENDERER "renderer"
@@ -154,6 +156,8 @@ void StreamingPreferences::reload()
     enableHdr = settings.value(SER_HDR, false).toBool();
     captureSysKeysMode = static_cast<CaptureSysKeysMode>(settings.value(SER_CAPTURESYSKEYS,
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
+    disabledShortcutKeys = settings.value(SER_DISABLEDSHORTCUTS, QString()).toString().toUpper();
+    shortcutsRequireLeftAlt = settings.value(SER_SHORTCUTSLEFTALT, false).toBool();
     audioConfig = static_cast<AudioConfig>(settings.value(SER_AUDIOCFG,
                                                   static_cast<int>(AudioConfig::AC_STEREO)).toInt());
     videoCodecConfig = static_cast<VideoCodecConfig>(settings.value(SER_VIDEOCFG,
@@ -361,6 +365,8 @@ void StreamingPreferences::save()
     settings.setValue(SER_REVERSESCROLL, reverseScrollDirection);
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
+    settings.setValue(SER_DISABLEDSHORTCUTS, disabledShortcutKeys);
+    settings.setValue(SER_SHORTCUTSLEFTALT, shortcutsRequireLeftAlt);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
 }
 
