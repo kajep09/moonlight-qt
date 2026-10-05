@@ -97,13 +97,15 @@ void SdlInputHandler::typeTextAsKeystrokes(const char* text)
         }
 
         char modifiers = shift ? MODIFIER_SHIFT : 0;
+        short shiftKeyCode = (short)(0x8000 | VK_LSHIFT);
+        keyCode = (short)(0x8000 | keyCode);
         if (shift) {
-            LiSendKeyboardEvent2(0x8000 | VK_LSHIFT, KEY_ACTION_DOWN, modifiers, 0);
+            LiSendKeyboardEvent2(shiftKeyCode, KEY_ACTION_DOWN, modifiers, 0);
         }
-        LiSendKeyboardEvent2(0x8000 | keyCode, KEY_ACTION_DOWN, modifiers, 0);
-        LiSendKeyboardEvent2(0x8000 | keyCode, KEY_ACTION_UP, modifiers, 0);
+        LiSendKeyboardEvent2(keyCode, KEY_ACTION_DOWN, modifiers, 0);
+        LiSendKeyboardEvent2(keyCode, KEY_ACTION_UP, modifiers, 0);
         if (shift) {
-            LiSendKeyboardEvent2(0x8000 | VK_LSHIFT, KEY_ACTION_UP, 0, 0);
+            LiSendKeyboardEvent2(shiftKeyCode, KEY_ACTION_UP, 0, 0);
         }
     }
 
