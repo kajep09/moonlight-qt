@@ -1530,6 +1530,23 @@ Flickable {
                         }
                     }
                 }
+
+                CheckBox {
+                    id: pasteAsKeystrokesCheck
+                    hoverEnabled: true
+                    width: parent.width
+                    text: qsTr("Type pasted clipboard text as key presses (US layout)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.pasteAsKeystrokes
+                    onCheckedChanged: {
+                        StreamingPreferences.pasteAsKeystrokes = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Use this if Ctrl+Alt+Shift+V types garbage on the host, which happens with Sunshine on Linux. The host must use a US keyboard layout. Other characters are still sent as text.")
+                }
             }
         }
 

@@ -158,6 +158,7 @@ public:
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(QString disabledShortcutKeys MEMBER disabledShortcutKeys NOTIFY disabledShortcutKeysChanged)
     Q_PROPERTY(bool shortcutsRequireLeftAlt MEMBER shortcutsRequireLeftAlt NOTIFY shortcutsRequireLeftAltChanged)
+    Q_PROPERTY(bool pasteAsKeystrokes MEMBER pasteAsKeystrokes NOTIFY pasteAsKeystrokesChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged);
 
     Q_INVOKABLE bool retranslate();
@@ -208,6 +209,9 @@ public:
     QString disabledShortcutKeys;
     bool shortcutsRequireLeftAlt;
 
+    // Type pasted ASCII text as US-layout key presses instead of a text event
+    bool pasteAsKeystrokes;
+
 signals:
     void displayModeChanged();
     void bitrateChanged();
@@ -244,6 +248,7 @@ signals:
     void captureSysKeysModeChanged();
     void disabledShortcutKeysChanged();
     void shortcutsRequireLeftAltChanged();
+    void pasteAsKeystrokesChanged();
     void keepAwakeChanged();
     void languageChanged();
     void rendererSelectionChanged();

@@ -51,6 +51,7 @@
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_DISABLEDSHORTCUTS "disabledshortcuts"
 #define SER_SHORTCUTSLEFTALT "shortcutsleftalt"
+#define SER_PASTEASKEYSTROKES "pasteaskeystrokes"
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
 #define SER_RENDERER "renderer"
@@ -158,6 +159,7 @@ void StreamingPreferences::reload()
                                                          static_cast<int>(CaptureSysKeysMode::CSK_OFF)).toInt());
     disabledShortcutKeys = settings.value(SER_DISABLEDSHORTCUTS, QString()).toString().toUpper();
     shortcutsRequireLeftAlt = settings.value(SER_SHORTCUTSLEFTALT, false).toBool();
+    pasteAsKeystrokes = settings.value(SER_PASTEASKEYSTROKES, false).toBool();
     audioConfig = static_cast<AudioConfig>(settings.value(SER_AUDIOCFG,
                                                   static_cast<int>(AudioConfig::AC_STEREO)).toInt());
     videoCodecConfig = static_cast<VideoCodecConfig>(settings.value(SER_VIDEOCFG,
@@ -367,6 +369,7 @@ void StreamingPreferences::save()
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_DISABLEDSHORTCUTS, disabledShortcutKeys);
     settings.setValue(SER_SHORTCUTSLEFTALT, shortcutsRequireLeftAlt);
+    settings.setValue(SER_PASTEASKEYSTROKES, pasteAsKeystrokes);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
 }
 

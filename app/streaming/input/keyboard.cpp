@@ -22,6 +22,96 @@
 #define GET_KEYPRESS_EXTENDED_MODIFIER(x) ((char)(((x) >> 16) & 0xFF))
 #define GET_KEYPRESS_FLAGS(x) ((char)(((x) >> 24) & 0xFF))
 
+#ifndef VK_RETURN
+#define VK_RETURN 0x0D
+#define VK_LSHIFT 0xA0
+#endif
+
+// Maps a printable ASCII character to a VK code on a US QWERTY layout
+static bool asciiToUsVirtualKey(char c, short& keyCode, bool& shift)
+{
+    static const char unshiftedSymbols[] = "`-=[]\\;',./";
+    static const char shiftedSymbols[] = "~_+{}|:\"<>?";
+    static const short symbolKeys[] = { 0xC0, 0xBD, 0xBB, 0xDB, 0xDD, 0xDC, 0xBA, 0xDE, 0xBC, 0xBE, 0xBF };
+    static const char shiftedDigits[] = ")!@#$%^&*(";
+
+    shift = false;
+
+    if (c >= 'a' && c <= 'z') {
+        keyCode = VK_A + (c - 'a');
+    }
+    else if (c >= 'A' && c <= 'Z') {
+        keyCode = VK_A + (c - 'A');
+        shift = true;
+    }
+    else if (c >= '0' && c <= '9') {
+        keyCode = VK_0 + (c - '0');
+    }
+    else if (c == ' ') {
+        keyCode = 0x20;
+    }
+    else if (c == '\n') {
+        keyCode = VK_RETURN;
+    }
+    else if (c == '\t') {
+        keyCode = 0x09;
+    }
+    else if (c != 0 && strchr(shiftedDigits, c)) {
+        keyCode = VK_0 + (strchr(shiftedDigits, c) - shiftedDigits);
+        shift = true;
+    }
+    else if (c != 0 && strchr(unshiftedSymbols, c)) {
+        keyCode = symbolKeys[strchr(unshiftedSymbols, c) - unshiftedSymbols];
+    }
+    else if (c != 0 && strchr(shiftedSymbols, c)) {
+        keyCode = symbolKeys[strchr(shiftedSymbols, c) - shiftedSymbols];
+        shift = true;
+    }
+    else {
+        return false;
+    }
+
+    return true;
+}
+
+// Some hosts (e.g. Sunshine on Linux) type text events with the Ctrl+Shift+U
+// Unicode entry method, which most apps don't support. Typing characters as
+// key presses works everywhere, as long as the host uses a US layout.
+// Characters without a US key are still sent as a text event.
+void SdlInputHandler::typeTextAsKeystrokes(const char* text)
+{
+    QByteArray pendingText;
+
+    for (const char* c = text; *c != 0; c++) {
+        short keyCode;
+        bool shift;
+
+        if (!asciiToUsVirtualKey(*c, keyCode, shift)) {
+            pendingText.append(*c);
+            continue;
+        }
+
+        if (!pendingText.isEmpty()) {
+            LiSendUtf8TextEvent(pendingText.constData(), (unsigned int)pendingText.size());
+            pendingText.clear();
+        }
+
+        char modifiers = shift ? MODIFIER_SHIFT : 0;
+        if (shift) {
+            LiSendKeyboardEvent2(0x8000 | VK_LSHIFT, KEY_ACTION_DOWN, modifiers, 0);
+        }
+        LiSendKeyboardEvent2(0x8000 | keyCode, KEY_ACTION_DOWN, modifiers, 0);
+        LiSendKeyboardEvent2(0x8000 | keyCode, KEY_ACTION_UP, modifiers, 0);
+        if (shift) {
+            LiSendKeyboardEvent2(0x8000 | VK_LSHIFT, KEY_ACTION_UP, 0, 0);
+        }
+    }
+
+    if (!pendingText.isEmpty()) {
+        LiSendUtf8TextEvent(pendingText.constData(), (unsigned int)pendingText.size());
+    }
+}
+
 void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
 {
     switch (combo) {
@@ -123,7 +213,12 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
             }
 
             // Send this text to the PC
-            LiSendUtf8TextEvent(text, (unsigned int)strlen(text));
+            if (m_PasteAsKeystrokes) {
+                typeTextAsKeystrokes(text);
+            }
+            else {
+                LiSendUtf8TextEvent(text, (unsigned int)strlen(text));
+            }
 
             // SDL_GetClipboardText() allocates, so we must free
             SDL_free((void*)text);

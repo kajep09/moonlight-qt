@@ -188,6 +188,8 @@ private:
 
     void performSpecialKeyCombo(KeyCombo combo);
 
+    void typeTextAsKeystrokes(const char* text);
+
     static
     Uint32 longPressTimerCallback(Uint32 interval, void* param);
 
@@ -210,6 +212,7 @@ private:
     bool m_ReverseScrollDirection;
     bool m_SwapFaceButtons;
     bool m_ShortcutsRequireLeftAlt;
+    bool m_PasteAsKeystrokes;
 
     bool m_NeedsManualCaptureOnLeave;
     bool m_MouseWasInVideoRegion;
