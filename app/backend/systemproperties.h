@@ -43,6 +43,9 @@ public:
     Q_INVOKABLE void waitForAsyncLoad();
     Q_INVOKABLE void refreshDisplays();
 
+    // Stop warning about the currently reported unmapped gamepads
+    Q_INVOKABLE void ignoreUnmappedGamepads();
+
 signals:
     void unmappedGamepadsChanged();
     void hasHardwareAccelerationChanged();
@@ -75,6 +78,7 @@ private:
     QSize maximumResolution;
     bool supportsHdr;
     QString unmappedGamepads;
+    QStringList unmappedGamepadGuids;
 
     // Properties set by refreshDisplays()
     QList<QRect> monitorNativeResolutions;

@@ -152,8 +152,13 @@ public:
 
     void updatePointerRegionLock();
 
+    // Skips devices the user chose to ignore. Optionally returns the GUIDs of
+    // the reported devices, for ignoreUnmappedGamepads().
     static
-    QString getUnmappedGamepads();
+    QString getUnmappedGamepads(QStringList* guids = nullptr);
+
+    static
+    void ignoreUnmappedGamepads(const QStringList& guids);
 
 private:
     enum KeyCombo {

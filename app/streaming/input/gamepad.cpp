@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #include <QtMath>
+#include <QSettings>
 
 // How long the Start button must be pressed to toggle mouse emulation
 #define MOUSE_EMULATION_LONG_PRESS_TIME 750
@@ -977,9 +978,26 @@ void SdlInputHandler::setAdaptiveTriggers(uint16_t controllerNumber, DualSenseOu
     SDL_free(report);
 }
 
-QString SdlInputHandler::getUnmappedGamepads()
+#define SER_IGNOREDGAMEPADS "ignoredunmappedgamepads"
+
+void SdlInputHandler::ignoreUnmappedGamepads(const QStringList& guids)
+{
+    QSettings settings;
+    QStringList ignored = settings.value(SER_IGNOREDGAMEPADS).toStringList();
+
+    for (const QString& guid : guids) {
+        if (!ignored.contains(guid)) {
+            ignored.append(guid);
+        }
+    }
+
+    settings.setValue(SER_IGNOREDGAMEPADS, ignored);
+}
+
+QString SdlInputHandler::getUnmappedGamepads(QStringList* guids)
 {
     QString ret;
+    QStringList ignored = QSettings().value(SER_IGNOREDGAMEPADS).toStringList();
 
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -1001,6 +1019,11 @@ QString SdlInputHandler::getUnmappedGamepads()
                         "Unmapped joystick: %s %s",
                         name ? name : "<UNKNOWN>",
                         guidStr);
+            if (ignored.contains(QString(guidStr))) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Ignoring unmapped joystick by user request");
+                continue;
+            }
             SDL_Joystick* joy = SDL_JoystickOpen(i);
             if (joy != nullptr) {
                 int numButtons = SDL_JoystickNumButtons(joy);
@@ -1019,6 +1042,9 @@ QString SdlInputHandler::getUnmappedGamepads()
                     }
 
                     ret += name;
+                    if (guids) {
+                        guids->append(QString(guidStr));
+                    }
                 }
 
                 SDL_JoystickClose(joy);

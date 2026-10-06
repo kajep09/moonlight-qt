@@ -163,6 +163,11 @@ int SystemProperties::getRefreshRate(int displayIndex)
     return monitorRefreshRates.value(displayIndex);
 }
 
+void SystemProperties::ignoreUnmappedGamepads()
+{
+    SdlInputHandler::ignoreUnmappedGamepads(unmappedGamepadGuids);
+}
+
 void SystemProperties::startAsyncLoad()
 {
     if (systemPropertyQueryThread) {
@@ -173,7 +178,7 @@ void SystemProperties::startAsyncLoad()
     // This isn't actually asynchronous (due to the need to synchronize with
     // SdlGamepadKeyNavigation), but we don't query it in the constructor
     // because it's expensive.
-    unmappedGamepads = SdlInputHandler::getUnmappedGamepads();
+    unmappedGamepads = SdlInputHandler::getUnmappedGamepads(&unmappedGamepadGuids);
     if (!unmappedGamepads.isEmpty()) {
         emit unmappedGamepadsChanged();
     }

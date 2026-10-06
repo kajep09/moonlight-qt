@@ -478,6 +478,19 @@ ApplicationWindow {
         helpTextSeparator: "\n\n"
         helpText: qsTr("Click the Help button for information on how to map your gamepads.")
         helpUrl: "https://github.com/moonlight-stream/moonlight-docs/wiki/Gamepad-Mapping"
+        standardButtons: Dialog.Ok | Dialog.Discard | (SystemProperties.hasBrowser ? Dialog.Help : 0)
+
+        onAboutToShow: {
+            // standardButton() was added in Qt 5.10, so we must check for it first
+            if (standardButton) {
+                standardButton(Dialog.Discard).text = qsTr("Don't show again")
+            }
+        }
+
+        onDiscarded: {
+            SystemProperties.ignoreUnmappedGamepads()
+            close()
+        }
     }
 
     // This dialog appears when quitting via keyboard or gamepad button
