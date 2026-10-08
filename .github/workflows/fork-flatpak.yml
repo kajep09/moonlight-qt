@@ -1,0 +1,63 @@
+---
+# Fork-only Flatpak build with native Wayland support (the AppImage is
+# X11-only). Uses Flathub's Moonlight manifest with the Moonlight source
+# swapped for this checkout.
+name: Fork - Linux Flatpak
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - custom
+      - 'custom-*'
+  workflow_dispatch:
+
+concurrency:
+  group: fork-flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      options: --privileged
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          path: src
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Checkout Flathub manifest
+        uses: actions/checkout@v5
+        with:
+          repository: flathub/com.moonlight_stream.Moonlight
+          path: flathub
+          fetch-depth: 1
+
+      - name: Use this checkout as the Moonlight source
+        shell: bash
+        run: |
+          python3 - <<'EOF'
+          import json
+          path = "flathub/com.moonlight_stream.Moonlight.json"
+          with open(path) as f:
+              manifest = json.load(f)
+          module = next(m for m in manifest["modules"] if isinstance(m, dict) and m.get("name") == "moonlight")
+          module["sources"] = [{"type": "dir", "path": "../src"}]
+          with open(path, "w") as f:
+              json.dump(manifest, f, indent=2)
+          EOF
+          echo "CI_VERSION=$(cat src/app/version.txt)-custom.$(echo ${GITHUB_SHA} | cut -c1-7)" >> "${GITHUB_ENV}"
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: flathub/com.moonlight_stream.Moonlight.json
+          bundle: Moonlight-${{ env.CI_VERSION }}.flatpak
+          artifact-name: Moonlight-LinuxFlatpak-${{ env.CI_VERSION }}
+          cache-key: flatpak-moonlight-v1
